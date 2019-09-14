@@ -54,7 +54,7 @@ def my_main(_run, lr, weight_decay, message, use_gpu, epochs, save_images):
         # Train for one epoch, then validate
         train(train_loader, model, criterion, optimizer, epoch, _run)
         with torch.no_grad():
-            losses = validate(validation_loader, model, criterion, save_images, epoch)
+            losses = validate(validation_loader, model, criterion, save_images, epoch,_run )
         # Save checkpoint and replace old best model if current model is better
         if losses < best_losses:
             best_losses = losses
