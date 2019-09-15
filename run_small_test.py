@@ -2,7 +2,12 @@ from sacred import Experiment
 from sacred.observers import MongoObserver, FileStorageObserver
 from time import sleep
 from color_net import ColorNet
-from datasets_utils import GrayscaleImageFolder, create_dirs, get_train_loader, get_val_loader
+from datasets_utils import (
+    GrayscaleImageFolder,
+    create_dirs,
+    get_train_loader,
+    get_val_loader,
+)
 import torch
 from train_utils import train, validate
 from torch import nn
@@ -54,7 +59,9 @@ def my_main(_run, lr, weight_decay, message, use_gpu, epochs, save_images):
         # Train for one epoch, then validate
         train(train_loader, model, criterion, optimizer, epoch, _run)
         with torch.no_grad():
-            losses = validate(validation_loader, model, criterion, save_images, epoch,_run )
+            losses = validate(
+                validation_loader, model, criterion, save_images, epoch, _run
+            )
         # Save checkpoint and replace old best model if current model is better
         if losses < best_losses:
             best_losses = losses
