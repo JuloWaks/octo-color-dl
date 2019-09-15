@@ -7,3 +7,4 @@ train_val_256_easyformat.tar
 obs/
 docker-scientifi-master/
 __pycache__/
+exp-*/
