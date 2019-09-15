@@ -134,14 +134,14 @@ def validate(val_loader, model, criterion, save_images, epoch, _run):
         output_ab = model(input_gray)  # throw away class predictions
         loss = criterion(output_ab, input_ab)
         losses.update(loss.item(), input_gray.size(0))
-
+        experiment_folder = _run.config.get("experiment_folder")
         # Save images to file
         if _run.config.get("save_images", False) and not already_saved_images:
             already_saved_images = True
             for j in range(min(len(output_ab), 10)):  # save at most 5 images
                 save_path = {
-                    "grayscale": "outputs/gray/",
-                    "colorized": "outputs/color/",
+                    "grayscale": experiment_folder + "outputs/gray/",
+                    "colorized": experiment_folder + "outputs/color/",
                 }
                 save_name = "img-{}-epoch-{}.jpg".format(
                     i * val_loader.batch_size + j, epoch
