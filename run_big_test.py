@@ -16,14 +16,16 @@ import os
 import pymongo
 import uuid
 
-ex = Experiment("run_smal_test")
+_use_gpu = torch.cuda.is_available()
+experiment_name = "run_big_test{}".format("_gpu" if _use_gpu else "")
+ex = Experiment()
 
 
 @ex.config
 def my_config():
     recipient = "world"
     message = "Hello %s!" % recipient
-    use_gpu = torch.cuda.is_available()
+    use_gpu = _use_gpu
     lr = 1e-2
     weight_decay = 0.0
     epochs = 1
