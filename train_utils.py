@@ -63,6 +63,7 @@ def train(train_loader, model, criterion, optimizer, epoch, _run):
     for i, (input_gray, input_ab, target) in enumerate(train_loader):
 
         # Use GPU if available
+        print ("checking gpu... {}".format(run.config.get("use_gpu", False)))
         if _run.config.get("use_gpu", False):
             input_gray, input_ab, target = (
                 input_gray.cuda(),
