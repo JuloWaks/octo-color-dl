@@ -14,6 +14,7 @@ from torch import nn
 from os import environ
 import os
 import pymongo
+import uuid
 
 ex = Experiment("run_smal_test")
 
@@ -25,8 +26,10 @@ def my_config():
     use_gpu = torch.cuda.is_available()
     lr = 1e-2
     weight_decay = 0.0
-    epochs = 2
+    epochs = 1
     save_images = True
+    run_id = uuid.uuid4()
+    experiment_folder = "exp-{}/".format(run_id)
 
 
 url_DB = environ["DB_URL"]
@@ -37,7 +40,9 @@ ex.observers.append(mongo_obs)
 
 
 @ex.automain
-def my_main(_run, lr, weight_decay, message, use_gpu, epochs, save_images):
+def my_main(
+    _run, lr, weight_decay, message, use_gpu, epochs, save_images, experiment_folder
+):
     print(message)
     print("Use gpu: {}".format(use_gpu))
     print("Creating dirs...")
@@ -48,16 +53,16 @@ def my_main(_run, lr, weight_decay, message, use_gpu, epochs, save_images):
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     train_loader = get_train_loader()
     validation_loader = get_val_loader()
-    os.makedirs("outputs/color", exist_ok=True)
-    os.makedirs("outputs/gray", exist_ok=True)
-    os.makedirs("checkpoints", exist_ok=True)
+    os.makedirs(experiment_folder + "outputs/color", exist_ok=True)
+    os.makedirs(experiment_folder + "outputs/gray", exist_ok=True)
+    os.makedirs(experiment_folder + "checkpoints", exist_ok=True)
     best_losses = 1e10
 
     print("Epochs: {}".format(epochs))
 
     for epoch in range(epochs):
         # Train for one epoch, then validate
-        train(train_loader, model, criterion, optimizer, epoch, _run)
+        # train(train_loader, model, criterion, optimizer, epoch, _run)
         with torch.no_grad():
             losses = validate(
                 validation_loader, model, criterion, save_images, epoch, _run
@@ -67,7 +72,8 @@ def my_main(_run, lr, weight_decay, message, use_gpu, epochs, save_images):
             best_losses = losses
             torch.save(
                 model.state_dict(),
-                "checkpoints/model-epoch-{}-losses-{:.3f}.pth".format(
+                experiment_folder
+                + "checkpoints/model-epoch-{}-losses-{:.3f}.pth".format(
                     epoch + 1, losses
                 ),
             )
