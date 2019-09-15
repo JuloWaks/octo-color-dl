@@ -43,7 +43,7 @@ ex.observers.append(mongo_obs)
 
 @ex.automain
 def my_main(
-    _run, lr, weight_decay, message, use_gpu, epochs, save_images, experiment_folder
+        _run, lr, weight_decay, message, use_gpu, epochs, save_images, experiment_folder
 ):
     print(message)
     print("Use gpu: {}".format(use_gpu))
@@ -53,8 +53,8 @@ def my_main(
     model = ColorNet()
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
-    train_folder = ""
-    val_folder = ""
+    train_folder = "places365_standard/train"
+    val_folder = "places365_standard/train"
     train_loader = get_train_loader(train_folder)
     validation_loader = get_val_loader(val_folder)
     os.makedirs(experiment_folder + "outputs/color", exist_ok=True)
