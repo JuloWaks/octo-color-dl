@@ -18,7 +18,7 @@ import uuid
 
 _use_gpu = torch.cuda.is_available()
 experiment_name = "run_big_test{}".format("_gpu" if _use_gpu else "")
-ex = Experiment()
+ex = Experiment(experiment_name)
 
 
 @ex.config
@@ -56,7 +56,7 @@ def my_main(
         model = model.cuda()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     train_folder = "places365_standard/train"
-    val_folder = "places365_standard/train"
+    val_folder = "places365_standard/val"
     train_loader = get_train_loader(train_folder)
     validation_loader = get_val_loader(val_folder)
     os.makedirs(experiment_folder + "outputs/color", exist_ok=True)
