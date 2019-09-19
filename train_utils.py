@@ -3,6 +3,18 @@ import matplotlib.pyplot as plt
 import torch
 from skimage.color import lab2rgb, rgb2lab, rgb2gray
 import numpy as np
+from datasets_utils import get_train_loader, get_val_loader
+import os
+import torch.nn.functional as F
+from torch import nn
+
+
+class L2Loss(nn.Module):
+    def __init__(self):
+        super(L2Loss, self).__init__()
+
+    def __call__(self, in0, in1):
+        return torch.sum((in0 - in1) ** 2, dim=1, keepdim=True)
 
 
 class AverageMeter(object):
@@ -21,10 +33,10 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
 
-    def publish(self, _run):
-        _run.log_scalar(self.name + "-avg", self.avg)
-        _run.log_scalar(self.name + "-val", self.val)
-        _run.log_scalar(self.name + "-count", self.count)
+    def publish(self, capture_func):
+        capture_func(self.name + "-avg", self.avg)
+        capture_func(self.name + "-val", self.val)
+        capture_func(self.name + "-count", self.count)
 
 
 def to_rgb(grayscale_input, ab_input, save_path=None, save_name=None):
@@ -48,7 +60,82 @@ def to_rgb(grayscale_input, ab_input, save_path=None, save_name=None):
         )
 
 
-def train(train_loader, model, criterion, optimizer, epoch, _run):
+def train(
+    rank,
+    args,
+    model,
+    device,
+    dataloader_kwargs,
+    train_folder="places365_standard/train",
+    loss_func=nn.MSELoss,
+):
+    # try:
+    print("starting")
+    torch.manual_seed(args["seed"] + rank)
+
+    train_loader = get_train_loader(train_folder, dataloader_kwargs, args["batch_size"])
+
+    # optimizer = torch.optim.Adam(
+    #     model.parameters(), lr=args["lr"], weight_decay=args["weight_decay"]
+    # )
+    optimizer = torch.optim.SGD(
+        model.parameters(),
+        lr=args["lr"],
+        weight_decay=args["weight_decay"],
+        momentum=0.9,
+    )  # FIXME change momentum to parameter
+
+    criterion = nn.MSELoss()
+    if args["use_gpu"]:
+        criterion = criterion.cuda()
+    for epoch in range(1, args["epochs"] + 1):
+        train_epoch(epoch, args, model, device, train_loader, optimizer, criterion)
+
+
+# except Exception as err:
+#     print("Handling run-time error:", err)
+#     raise err
+
+
+def train_epoch(epoch, args, model, device, data_loader, optimizer, criterion):
+
+    model.train()
+    pid = os.getpid()
+    for batch_idx, (input_gray, input_ab, target) in enumerate(data_loader):
+        if args["use_gpu"]:
+            input_gray, input_ab, target = (
+                input_gray.cuda(),
+                input_ab.cuda(),
+                target.cuda(),
+            )
+
+        optimizer.zero_grad()
+
+        # Run forward pass
+        # print("Size", input_gray.size())
+        output_ab = model(input_gray)
+        # print("Outside: input size", input_gray.size(), "output_size", output_ab.size())
+        # print("loss: input size", input_ab.size(), "output_size", output_ab.size())
+
+        loss = criterion(output_ab, input_ab)
+        # Compute gradient and optimize
+        loss.backward()
+        optimizer.step()
+
+        if batch_idx % args["log_interval"] == 0:
+            print(
+                "{}\tTrain Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(
+                    pid,
+                    epoch,
+                    batch_idx * len(input_gray),
+                    len(data_loader.dataset),
+                    100.0 * batch_idx / len(data_loader),
+                    loss.item(),
+                )
+            )
+
+
+def train_epoch2(train_loader, model, criterion, optimizer, epoch, _run):
     print("Starting training epoch {}".format(epoch))
     model.train()
 
