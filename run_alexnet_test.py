@@ -101,8 +101,8 @@ def my_main(
         "experiment_folder": experiment_folder,
     }
 
-    train_folder = "images/val"
-    val_folder = "images/val"
+    train_folder = "places365_standard/train"
+    val_folder = "places365_standard/val"
     trained = False
     options = dict({"num_classes": (2 * 224 * 224)})
     model = AlexNet().to(device)
