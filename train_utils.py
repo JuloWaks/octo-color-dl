@@ -7,6 +7,7 @@ from datasets_utils import get_train_loader, get_val_loader
 import os
 import torch.nn.functional as F
 from torch import nn
+plt.switch_backend('agg')
 
 
 class L2Loss(nn.Module):
