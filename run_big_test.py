@@ -18,7 +18,7 @@ import uuid
 
 _use_gpu = torch.cuda.is_available()
 experiment_name = "run_big_test{}".format("_gpu" if _use_gpu else "")
-ex = Experiment()
+ex = Experiment(experiment_name)
 
 
 @ex.config
