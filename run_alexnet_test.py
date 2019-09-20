@@ -82,9 +82,9 @@ def my_main(
     device = torch.device("cuda" if use_gpu else "cpu")
     dataloader_kwargs = {"pin_memory": True} if use_gpu else {}
     # if save_exp:
-    os.makedirs(experiment_folder + "outputs/color", exist_ok=True)
-    os.makedirs(experiment_folder + "outputs/gray", exist_ok=True)
-    os.makedirs(experiment_folder + "checkpoints", exist_ok=True)
+    os.makedirs(experiment_folder + "outputs/color")
+    os.makedirs(experiment_folder + "outputs/gray")
+    os.makedirs(experiment_folder + "checkpoints")
     best_losses = 1e10
 
     seed = int(time.time())

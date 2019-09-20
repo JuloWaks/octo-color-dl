@@ -4,7 +4,6 @@ import torch
 from skimage.color import lab2rgb, rgb2lab, rgb2gray
 from torchvision import datasets
 import torchvision.transforms as transforms
-from numba import jit
 import time
 
 
