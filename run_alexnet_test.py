@@ -56,10 +56,10 @@ def my_config():
     save_exp = False
 
 
-# url_DB = environ["DB_URL"]
-# mongo_client = pymongo.MongoClient(url_DB)
-# mongo_obs = MongoObserver.create(client=mongo_client, db_name="octo-dl")
-# ex.observers.append(mongo_obs)
+url_DB = environ["DB_URL"]
+mongo_client = pymongo.MongoClient(url_DB)
+mongo_obs = MongoObserver.create(client=mongo_client, db_name="octo-dl")
+ex.observers.append(mongo_obs)
 # ex.observers.append(FileStorageObserver("my_runs"))
 
 
@@ -81,10 +81,10 @@ def my_main(
 
     device = torch.device("cuda" if use_gpu else "cpu")
     dataloader_kwargs = {"pin_memory": True} if use_gpu else {}
-    if save_exp:
-        os.makedirs(experiment_folder + "outputs/color", exist_ok=True)
-        os.makedirs(experiment_folder + "outputs/gray", exist_ok=True)
-        os.makedirs(experiment_folder + "checkpoints", exist_ok=True)
+    # if save_exp:
+    os.makedirs(experiment_folder + "outputs/color", exist_ok=True)
+    os.makedirs(experiment_folder + "outputs/gray", exist_ok=True)
+    os.makedirs(experiment_folder + "checkpoints", exist_ok=True)
     best_losses = 1e10
 
     seed = int(time.time())
@@ -98,9 +98,11 @@ def my_main(
         "use_gpu": use_gpu,
         "epochs": epochs,
         "seed": seed,
+        "experiment_folder": experiment_folder,
     }
 
     train_folder = "images/val"
+    val_folder = "images/val"
     trained = False
     options = dict({"num_classes": (2 * 224 * 224)})
     model = AlexNet().to(device)
@@ -110,30 +112,24 @@ def my_main(
 
     processes = []
     time1 = time.time()
-    train(1, args, model, device, dataloader_kwargs, train_folder, nn.CrossEntropyLoss)
+    train(
+        1,
+        args,
+        model,
+        device,
+        dataloader_kwargs,
+        train_folder,
+        nn.CrossEntropyLoss,
+        val_folder,
+    )
     time2 = time.time()
     print("{:s} function took {:.3f} ms".format("train", (time2 - time1) * 1000.0))
+
     # output_ab = model(input_gray)  # throw away class predictions
     # loss = criterion(output_ab, input_ab)
     # losses.update(loss.item(), input_gray.size(0))
     # experiment_folder = _run.config.get("experiment_folder")
     # # Save images to file
-    # if _run.config.get("save_images", False) and not already_saved_images:
-    #     already_saved_images = True
-    #     for j in range(min(len(output_ab), 10)):  # save at most 5 images
-    #         save_path = {
-    #             "grayscale": experiment_folder + "outputs/gray/",
-    #             "colorized": experiment_folder + "outputs/color/",
-    #         }
-    #         save_name = "img-{}-epoch-{}.jpg".format(
-    #             i * val_loader.batch_size + j, epoch
-    #         )
-    #         to_rgb(
-    #             input_gray[j].cpu(),
-    #             ab_input=output_ab[j].detach().cpu(),
-    #             save_path=save_path,
-    #             save_name=save_name,
-    #         )
 
     # for rank in range(args["num_processes"]):
     #     p = mp.spawn(

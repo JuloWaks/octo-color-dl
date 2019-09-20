@@ -68,13 +68,14 @@ def train(
     dataloader_kwargs,
     train_folder="places365_standard/train",
     loss_func=nn.MSELoss,
+    val_folder="places365_standard/val",
 ):
     # try:
     print("starting")
     torch.manual_seed(args["seed"] + rank)
 
     train_loader = get_train_loader(train_folder, dataloader_kwargs, args["batch_size"])
-
+    val_loader = get_val_loader(val_folder)
     # optimizer = torch.optim.Adam(
     #     model.parameters(), lr=args["lr"], weight_decay=args["weight_decay"]
     # )
@@ -86,10 +87,23 @@ def train(
     )  # FIXME change momentum to parameter
 
     criterion = nn.MSELoss()
+    best_losses = 1e10
     if args["use_gpu"]:
         criterion = criterion.cuda()
     for epoch in range(1, args["epochs"] + 1):
-        train_epoch(epoch, args, model, device, train_loader, optimizer, criterion)
+        # train_epoch(epoch, args, model, device, train_loader, optimizer, criterion)
+        with torch.no_grad():
+            losses = validate(val_loader, model, criterion, True, epoch, args)
+        # Save checkpoint and replace old best model if current model is better
+        if losses < best_losses:
+            best_losses = losses
+            torch.save(
+                model.state_dict(),
+                args["experiment_folder"]
+                + "checkpoints/model-epoch-{}-losses-{:.3f}.pth".format(
+                    epoch + 1, losses
+                ),
+            )
 
 
 # except Exception as err:
@@ -135,83 +149,22 @@ def train_epoch(epoch, args, model, device, data_loader, optimizer, criterion):
             )
 
 
-def train_epoch2(train_loader, model, criterion, optimizer, epoch, _run):
-    print("Starting training epoch {}".format(epoch))
-    model.train()
-
-    # Prepare value counters and timers
-    batch_time, data_time, losses = (
-        AverageMeter("train.batch_time"),
-        AverageMeter("train.date_time"),
-        AverageMeter("train.loss"),
-    )
-
-    end = time.time()
-    for i, (input_gray, input_ab, target) in enumerate(train_loader):
-
-        # Use GPU if available
-
-        if _run.config.get("use_gpu", False):
-            input_gray, input_ab, target = (
-                input_gray.cuda(),
-                input_ab.cuda(),
-                target.cuda(),
-            )
-
-        # Record time to load data (above)
-        data_time.update(time.time() - end)
-
-        # Run forward pass
-        output_ab = model(input_gray)
-        loss = criterion(output_ab, input_ab)
-        losses.update(loss.item(), input_gray.size(0))
-
-        # Compute gradient and optimize
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-        # Record time to do forward and backward passes
-        batch_time.update(time.time() - end)
-        end = time.time()
-        losses.publish(_run)
-        batch_time.publish(_run)
-
-        # Print model accuracy -- in the code below, val refers to value, not validation
-        if i % 25 == 0:
-            print(
-                "Epoch: [{0}][{1}/{2}]\t"
-                "Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t"
-                "Data {data_time.val:.3f} ({data_time.avg:.3f})\t"
-                "Loss {loss.val:.4f} ({loss.avg:.4f})\t".format(
-                    epoch,
-                    i,
-                    len(train_loader),
-                    batch_time=batch_time,
-                    data_time=data_time,
-                    loss=losses,
-                )
-            )
-
-    print("Finished training epoch {}".format(epoch))
-
-
-def validate(val_loader, model, criterion, save_images, epoch, _run):
+def validate(val_loader, model, criterion, save_images, epoch, args):
     model.eval()
 
-    batch_time, data_time, losses = (
-        AverageMeter("validate.batch_time"),
-        AverageMeter("validate.date_time"),
-        AverageMeter("validate.loss"),
-    )
+    # batch_time, data_time, losses = (
+    #     AverageMeter("validate.batch_time"),
+    #     AverageMeter("validate.date_time"),
+    #     AverageMeter("validate.loss"),
+    # )
 
-    end = time.time()
+    # end = time.time()
     already_saved_images = False
     for i, (input_gray, input_ab, target) in enumerate(val_loader):
-        data_time.update(time.time() - end)
+        # data_time.update(time.time() - end)
 
         # Use GPU
-        if _run.config.get("use_gpu", False):
+        if args["use_gpu"]:
             input_gray, input_ab, target = (
                 input_gray.cuda(),
                 input_ab.cuda(),
@@ -221,10 +174,9 @@ def validate(val_loader, model, criterion, save_images, epoch, _run):
         # Run model and record loss
         output_ab = model(input_gray)  # throw away class predictions
         loss = criterion(output_ab, input_ab)
-        losses.update(loss.item(), input_gray.size(0))
-        experiment_folder = _run.config.get("experiment_folder")
+        experiment_folder = args.get("experiment_folder")
         # Save images to file
-        if _run.config.get("save_images", False) and not already_saved_images:
+        if args.get("save_images", True) and not already_saved_images:
             already_saved_images = True
             for j in range(min(len(output_ab), 10)):  # save at most 5 images
                 save_path = {
@@ -241,21 +193,18 @@ def validate(val_loader, model, criterion, save_images, epoch, _run):
                     save_name=save_name,
                 )
 
-        # Record time to do forward passes and save images
-        batch_time.update(time.time() - end)
-        end = time.time()
+        # # Record time to do forward passes and save images
+        # batch_time.update(time.time() - end)
+        # end = time.time()
 
         # Print model accuracy -- in the code below, val refers to both value and validation
-        if i % 25 == 0:
+        if i % args["log_interval"] == 0:
             print(
                 "Validate: [{0}/{1}]\t"
-                "Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t"
-                "Loss {loss.val:.4f} ({loss.avg:.4f})\t".format(
-                    i, len(val_loader), batch_time=batch_time, loss=losses
-                )
+                "Loss {loss:.4f})\t".format(i, len(val_loader), loss=loss)
             )
-        losses.publish(_run)
+        # losses.publish()
 
     print("Finished validation.")
-    return losses.avg
+    return loss
 
