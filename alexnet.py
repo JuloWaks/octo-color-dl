@@ -32,7 +32,6 @@ class AlexNet(nn.Module):
         #             nn.ReLU(inplace=True),
         #             nn.Linear(4096, num_classes),
         #         )
-        # W out=(W in −1)×stride[1]−2×padding[1]+dilation[1]×(kernel_size[1]−1)+output_padding[1]+1
 
         self.classifier = nn.Sequential(
             nn.ConvTranspose2d(256, 128, (3, 3), stride=2, dilation=1),
